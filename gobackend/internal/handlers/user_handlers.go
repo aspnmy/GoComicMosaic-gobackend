@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"fmt"
-	"GoComicMosaic-gobackend/gobackend/internal/auth"
-	"GoComicMosaic-gobackend/gobackend/internal/models"
+
 	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/auth"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
 
 	"github.com/gin-gonic/gin"
 )
@@ -106,7 +108,7 @@ func UpdateUser(c *gin.Context) {
 		IsAdmin  bool   `json:"is_admin"`
 	}
 
-	if err := c.ShouldBindJSON(&userUpdate); err != nil {
+	if bindErr := c.ShouldBindJSON(&userUpdate); bindErr != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
 		return
 	}
@@ -147,9 +149,9 @@ func UpdateUser(c *gin.Context) {
 
 	// 更新密码
 	if userUpdate.Password != "" {
-		hashedPassword, err := auth.GeneratePasswordHash(userUpdate.Password)
-		if err != nil {
-			log.Printf("密码哈希失败: %v", err)
+		hashedPassword, hashErr := auth.GeneratePasswordHash(userUpdate.Password)
+		if hashErr != nil {
+			log.Printf("密码哈希失败: %v", hashErr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新用户失败"})
 			return
 		}

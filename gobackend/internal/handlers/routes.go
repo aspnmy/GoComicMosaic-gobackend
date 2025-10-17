@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
 
 	"github.com/gin-gonic/gin"
 )

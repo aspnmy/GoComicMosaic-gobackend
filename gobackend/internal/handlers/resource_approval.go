@@ -3,9 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"GoComicMosaic-gobackend/gobackend/internal/config"
-	"GoComicMosaic-gobackend/gobackend/internal/models"
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
 	"io"
 	"log"
 	"net/http"
@@ -14,6 +11,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -44,7 +45,7 @@ func ApproveResource(c *gin.Context) {
 	}
 
 	// 如果是补充内容审批
-	if resource.Supplement != nil && resource.IsSupplementApproval == false {
+	if resource.Supplement != nil && !resource.IsSupplementApproval {
 		log.Printf("当前是补充资源审批")
 		approveResourceSupplement(c, resourceID, resource, approval)
 		resource.Status = models.ResourceStatus(strings.ToUpper(string(approval.Status)))
@@ -61,7 +62,7 @@ func ApproveResource(c *gin.Context) {
 	// 如果资源被批准，处理图片移动
 	// 保存所有新路径
 	newImagePaths := make([]string, 0, len(approval.ApprovedImages))
-	if strings.ToLower(string(approval.Status)) == strings.ToLower(string(models.ResourceStatusApproved)) {
+	if strings.EqualFold(string(approval.Status), string(models.ResourceStatusApproved)) {
 		// 检查是否没有批准任何图片和链接
 		if len(approval.ApprovedImages) == 0 && len(approval.ApprovedLinks) == 0 {
 			log.Printf("[INFO] 资源ID: %d 被批准但没有批准任何图片和链接，将直接删除该资源", resourceID)
@@ -262,7 +263,6 @@ func ApproveResource(c *gin.Context) {
 		Status:          resource.Status,
 		FieldApprovals:  models.JsonMap{},
 		FieldRejections: models.JsonMap{},
-		ApprovedImages:  approval.ApprovedImages,
 		RejectedImages:  approval.RejectedImages,
 		PosterImage:     approval.PosterImage,
 		Notes:           approval.Notes,
@@ -403,7 +403,6 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 		Status:               models.ResourceStatus(strings.ToUpper(string(approval.Status))),
 		FieldApprovals:       models.JsonMap{},
 		FieldRejections:      models.JsonMap{},
-		ApprovedImages:       approval.ApprovedImages,
 		RejectedImages:       approval.RejectedImages,
 		PosterImage:          approval.PosterImage,
 		Notes:                approval.Notes,
@@ -477,7 +476,7 @@ func approveResourceSupplement(c *gin.Context, resourceID int, resource models.R
 	newImagePaths := make([]string, 0, len(approval.ApprovedImages))
 
 	// 如果资源被批准，处理图片移动
-	if strings.ToLower(string(approval.Status)) == strings.ToLower(string(models.ResourceStatusApproved)) {
+	if strings.EqualFold(string(approval.Status), string(models.ResourceStatusApproved)) {
 		// 移动已批准的图片
 		if len(approval.ApprovedImages) > 0 {
 			log.Printf("[DEBUG] 开始移动已批准的补充图片，资源ID: %d, 图片数量: %d", resource.ID, len(approval.ApprovedImages))

@@ -13,8 +13,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"GoComicMosaic-gobackend/gobackend/internal/models"
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 )
 
 // GetResources 获取资源列表 - 认证用户可获取，管理员可看到全部，普通用户仅能看到已批准的资源
@@ -139,7 +139,7 @@ func GetPendingResources(c *gin.Context) {
 
 			log.Printf("处理资源ID=%d的补充内容", resource.ID)
 
-			if resource.Supplement == nil || len(resource.Supplement) == 0 {
+			if len(resource.Supplement) == 0 {
 				log.Printf("资源ID=%d的补充内容为空", resource.ID)
 				continue
 			}
@@ -457,7 +457,7 @@ func CreateResource(c *gin.Context) {
 }
 
 // 添加一个辅助函数，用于转换资源的所有图片为WebP格式
-func convertResourceImagesToWebP(images []string, resourceID int) ([]string, error) {
+func convertResourceImagesToWebP(images []string) ([]string, error) {
 	if len(images) == 0 {
 		return images, nil
 	}
@@ -502,8 +502,8 @@ func UpdateResource(c *gin.Context) {
 
 	// 解析请求
 	var resourceUpdate models.ResourceUpdate
-	if err := c.ShouldBindJSON(&resourceUpdate); err != nil {
-		log.Printf("请求参数解析失败: %v", err)
+	if bindErr := c.ShouldBindJSON(&resourceUpdate); bindErr != nil {
+		log.Printf("请求参数解析失败: %v", bindErr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
 		return
 	}
@@ -517,9 +517,9 @@ func UpdateResource(c *gin.Context) {
 
 	// 检查资源是否存在
 	var resource models.Resource
-	err = models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
-	if err != nil {
-		log.Printf("无法找到资源: %v", err)
+	dbErr := models.DB.Get(&resource, `SELECT * FROM resources WHERE id = ?`, resourceID)
+	if dbErr != nil {
+		log.Printf("无法找到资源: %v", dbErr)
 		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
 		return
 	}
@@ -576,10 +576,10 @@ func UpdateResource(c *gin.Context) {
 		// 如果有需要移动的图片，则进行移动
 		if len(imagesToMove) > 0 {
 			log.Printf("开始移动 %d 张图片", len(imagesToMove))
-			newImagePaths, err := utils.MoveApprovedImages(resourceID, imagesToMove)
-			if err != nil {
-				log.Printf("移动图片失败: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("移动图片失败: %v", err)})
+			newImagePaths, moveErr := utils.MoveApprovedImages(resourceID, imagesToMove)
+			if moveErr != nil {
+				log.Printf("移动图片失败: %v", moveErr)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("移动图片失败: %v", moveErr)})
 				return
 			}
 			log.Printf("图片移动完成，新路径: %v", newImagePaths)
@@ -612,9 +612,9 @@ func UpdateResource(c *gin.Context) {
 			finalImages = append(finalImages, newImagePaths...)
 
 			// 尝试将图片转换为WebP格式
-			webpImages, err := convertResourceImagesToWebP(finalImages, resourceID)
-			if err != nil {
-				log.Printf("转换图片为WebP格式时出错: %v", err)
+		webpImages, webpErr := convertResourceImagesToWebP(finalImages)
+			if webpErr != nil {
+				log.Printf("转换图片为WebP格式时出错: %v", webpErr)
 				// 发生错误时继续使用原始图片
 			} else {
 				finalImages = webpImages
@@ -643,9 +643,9 @@ func UpdateResource(c *gin.Context) {
 			}(finalImages)
 		} else {
 			// 如果没有需要移动的图片，直接尝试转换为WebP
-			webpImages, err := convertResourceImagesToWebP(resourceUpdate.Images, resourceID)
-			if err != nil {
-				log.Printf("转换图片为WebP格式时出错: %v", err)
+		webpImages, webpErr := convertResourceImagesToWebP(resourceUpdate.Images)
+			if webpErr != nil {
+				log.Printf("转换图片为WebP格式时出错: %v", webpErr)
 				// 发生错误时继续使用原始图片
 				resource.Images = resourceUpdate.Images
 			} else {
@@ -721,11 +721,11 @@ func UpdateResource(c *gin.Context) {
 		// 如果有贴纸图片需要移动
 		if len(imagesToMove) > 0 {
 			log.Printf("开始移动 %d 张贴纸图片到永久目录", len(imagesToMove))
-			newImagePaths, err := utils.MoveApprovedImages(resourceID, imagesToMove)
+			newImagePaths, moveErr := utils.MoveApprovedImages(resourceID, imagesToMove)
 
-			if err != nil {
-				log.Printf("移动贴纸图片失败: %v", err)
-				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("移动贴纸图片失败: %v", err)})
+			if moveErr != nil {
+				log.Printf("移动贴纸图片失败: %v", moveErr)
+				c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("移动贴纸图片失败: %v", moveErr)})
 				return
 			}
 
@@ -763,10 +763,10 @@ func UpdateResource(c *gin.Context) {
 		// 如果有贴纸图片，进行WebP转换
 		if len(allStickerImages) > 0 {
 			log.Printf("开始将 %d 张贴纸图片转换为WebP格式", len(allStickerImages))
-			webpImages, err := convertResourceImagesToWebP(allStickerImages, resourceID)
+			webpImages, webpErr := convertResourceImagesToWebP(allStickerImages)
 
-			if err != nil {
-				log.Printf("转换贴纸图片为WebP格式时出错: %v", err)
+			if webpErr != nil {
+				log.Printf("转换贴纸图片为WebP格式时出错: %v", webpErr)
 				// 发生错误时继续使用原始图片
 			} else {
 				// 更新贴纸中的图片URL为WebP路径
@@ -860,17 +860,17 @@ func UpdateResourceStickers(c *gin.Context) {
 		Stickers models.JsonMap `json:"stickers"`
 	}
 
-	if err := c.ShouldBindJSON(&stickerUpdate); err != nil {
-		log.Printf("贴纸请求参数解析失败: %v", err)
+	if bindErr := c.ShouldBindJSON(&stickerUpdate); bindErr != nil {
+		log.Printf("贴纸请求参数解析失败: %v", bindErr)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的贴纸数据"})
 		return
 	}
 
 	// 获取资源
-	resource, err := models.GetResourceByID(resourceID)
-	if err != nil {
-		log.Printf("无法找到资源: %v", err)
-		c.JSON(http.StatusNotFound, gin.H{"error": "资源未找到"})
+	resource, getErr := models.GetResourceByID(resourceID)
+	if getErr != nil {
+		log.Printf("获取资源失败: %v", getErr)
+		c.JSON(http.StatusNotFound, gin.H{"error": "资源不存在"})
 		return
 	}
 
@@ -940,7 +940,7 @@ func UpdateResourceStickers(c *gin.Context) {
 		// 如果有贴纸图片，进行WebP转换
 		if len(allStickerImages) > 0 {
 			log.Printf("开始将 %d 张贴纸图片转换为WebP格式", len(allStickerImages))
-			webpImages, err := convertResourceImagesToWebP(allStickerImages, resourceID)
+			webpImages, err := convertResourceImagesToWebP(allStickerImages)
 
 			if err != nil {
 				log.Printf("转换贴纸图片为WebP格式时出错: %v", err)
@@ -1004,7 +1004,7 @@ func UpdateResourceTMDBInfo(c *gin.Context) {
 		TmdbID    *int   `json:"tmdb_id"`
 	}
 
-	if err := c.ShouldBindJSON(&request); err != nil {
+	if bindErr := c.ShouldBindJSON(&request); bindErr != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求参数"})
 		return
 	}
@@ -1037,8 +1037,8 @@ func UpdateResourceTMDBInfo(c *gin.Context) {
 		resource.TmdbID = request.TmdbID
 	} else if request.TitleEn != "" {
 		// 如果提供了英文标题，通过TMDB API查询资源ID
-		tmdbResults, err := SearchTMDBByQuery(request.TitleEn, request.MediaType)
-		if err != nil || len(tmdbResults) == 0 {
+		tmdbResults, tmdbErr := SearchTMDBByQuery(request.TitleEn, request.MediaType)
+		if tmdbErr != nil || len(tmdbResults) == 0 {
 			c.JSON(http.StatusNotFound, gin.H{"error": "在TMDB中未找到匹配的资源"})
 			return
 		}

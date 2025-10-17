@@ -12,6 +12,8 @@ var (
 	AssetsDir string
 	AssetPath string // 保留原有变量以保持兼容性
 	Version   string = "dev" // 版本号，由构建脚本注入，默认为dev
+	// 图片格式配置，默认为webp，可通过环境变量或数据库设置配置为avif
+	ImageFormat string = "webp"
 )
 
 // 初始化配置
@@ -52,6 +54,18 @@ func init() {
 		log.Printf("使用默认资源目录: %s", AssetsDir)
 	}
 	
+	// 初始化图片格式配置
+	if imgFormat := os.Getenv("IMAGE_FORMAT"); imgFormat != "" {
+		if imgFormat == "avif" || imgFormat == "webp" {
+			ImageFormat = imgFormat
+			log.Printf("使用环境变量指定的图片格式: %s", ImageFormat)
+		} else {
+			log.Printf("环境变量指定的图片格式不支持: %s，使用默认格式: webp", imgFormat)
+		}
+	} else {
+		log.Printf("使用默认图片格式: %s", ImageFormat)
+	}
+	
 	// 确保目录存在
 	ensureDirExists(filepath.Dir(DbPath))
 	ensureDirExists(AssetsDir)
@@ -81,4 +95,25 @@ func GetDbPath() string {
 // 返回当前应用的版本号，由构建脚本在编译时注入
 func GetVersion() string {
 	return Version
+}
+
+// GetImageFormat 获取图片格式配置
+// 返回当前配置的图片格式，支持"webp"和"avif"
+func GetImageFormat() string {
+	return ImageFormat
+}
+
+// SetImageFormat 设置图片格式配置
+// 参数:
+// - format: 图片格式，支持"webp"和"avif"
+// 返回值:
+// - bool: 设置是否成功
+func SetImageFormat(format string) bool {
+	if format == "webp" || format == "avif" {
+		ImageFormat = format
+		log.Printf("图片格式已更新为: %s", ImageFormat)
+		return true
+	}
+	log.Printf("无效的图片格式: %s，不支持", format)
+	return false
 }

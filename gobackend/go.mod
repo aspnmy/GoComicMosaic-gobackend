@@ -1,4 +1,4 @@
-module github.com/aspnmy/GoComicMosaic-gobackend
+module github.com/aspnmy/GoComicMosaic-gobackend/gobackend
 
 go 1.22.2
 

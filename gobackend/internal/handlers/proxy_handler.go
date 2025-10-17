@@ -59,9 +59,9 @@ func ProxyHandler(c *gin.Context) {
 		req, err = http.NewRequest(method, targetURL, nil)
 	default:
 		// POST、PUT、DELETE等可能带有请求体的方法
-		bodyData, err := io.ReadAll(c.Request.Body)
-		if err != nil {
-			log.Printf("读取请求体失败: %v", err)
+		bodyData, readErr := io.ReadAll(c.Request.Body)
+		if readErr != nil {
+			log.Printf("读取请求体失败: %v", readErr)
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code": 500,
 				"msg":  "读取请求体失败",
@@ -71,7 +71,7 @@ func ProxyHandler(c *gin.Context) {
 		// 使用与原始请求相同的方法创建新请求
 		log.Printf("4444444请求体: %s", string(bodyData))
 		log.Printf("5555555请URL: %s", string(targetURL))
-		req, err = http.NewRequest(method, targetURL, bytes.NewReader(bodyData))
+		req, _ = http.NewRequest(method, targetURL, bytes.NewReader(bodyData))
 		
 		// 如果原始请求有Content-Type，则保留它
 		contentType := c.GetHeader("Content-Type")
@@ -160,4 +160,4 @@ func ProxyHandler(c *gin.Context) {
 	if err != nil {
 		log.Printf("复制响应内容失败: %v", err)
 	}
-} 
+}

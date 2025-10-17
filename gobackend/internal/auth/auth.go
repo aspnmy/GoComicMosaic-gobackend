@@ -10,7 +10,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 
-	"GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
 )
 
 // 配置常量

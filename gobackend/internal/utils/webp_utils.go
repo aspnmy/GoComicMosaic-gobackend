@@ -176,14 +176,14 @@ func ConvertToWebP(imgPath string, useWebpExt ...bool) (string, error) {
 	log.Printf("处理图片路径: %s -> %s", imgPath, srcPath)
 	
 	// 检查源文件是否存在
-	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(srcPath); os.IsNotExist(statErr) {
 		return "", fmt.Errorf("源文件不存在: %s", srcPath)
 	}
 	
 	// 读取源图片文件
-	srcFile, err := os.Open(srcPath)
-	if err != nil {
-		return "", fmt.Errorf("打开源图片失败: %w", err)
+	srcFile, openErr := os.Open(srcPath)
+	if openErr != nil {
+		return "", fmt.Errorf("打开源图片失败: %w", openErr)
 	}
 	defer srcFile.Close()
 	
@@ -196,8 +196,8 @@ func ConvertToWebP(imgPath string, useWebpExt ...bool) (string, error) {
 	}
 	
 	// 将文件指针重置到开头
-	if _, err := srcFile.Seek(0, io.SeekStart); err != nil {
-		return "", fmt.Errorf("重置文件指针失败: %w", err)
+	if _, seekErr := srcFile.Seek(0, io.SeekStart); seekErr != nil {
+		return "", fmt.Errorf("重置文件指针失败: %w", seekErr)
 	}
 	
 	// 先尝试使用通用解码器
@@ -212,9 +212,9 @@ func ConvertToWebP(imgPath string, useWebpExt ...bool) (string, error) {
 		
 		// 重置文件指针
 		srcFile.Close()
-		srcFile, err = os.Open(srcPath)
-		if err != nil {
-			return "", fmt.Errorf("重新打开源图片失败: %w", err)
+		srcFile, reopenErr := os.Open(srcPath)
+		if reopenErr != nil {
+			return "", fmt.Errorf("重新打开源图片失败: %w", reopenErr)
 		}
 		defer srcFile.Close()
 		
@@ -228,11 +228,11 @@ func ConvertToWebP(imgPath string, useWebpExt ...bool) (string, error) {
 			case "gif":
 				srcImg, decodeErr = gif.Decode(srcFile)
 			default:
-				// 其他检测到的图片类型，再次尝试通用解码器
-				if _, err := srcFile.Seek(0, io.SeekStart); err != nil {
-					return "", fmt.Errorf("重置文件指针失败: %w", err)
-				}
-				srcImg, _, decodeErr = image.Decode(srcFile)
+			// 其他检测到的图片类型，再次尝试通用解码器
+			if _, seekErr := srcFile.Seek(0, io.SeekStart); seekErr != nil {
+				return "", fmt.Errorf("重置文件指针失败: %w", seekErr)
+			}
+			srcImg, _, decodeErr = image.Decode(srcFile)
 			}
 		} else {
 			// 如果没有检测到类型，根据文件扩展名尝试
@@ -249,11 +249,11 @@ func ConvertToWebP(imgPath string, useWebpExt ...bool) (string, error) {
 				srcImg, decodeErr = gif.Decode(srcFile)
 			default:
 				// 最后一次尝试：读取全部内容并使用bytes.Reader尝试解码
-				srcFile.Close()
-				fileContent, err := os.ReadFile(srcPath)
-				if err != nil {
-					return "", fmt.Errorf("读取文件内容失败: %w", err)
-				}
+			srcFile.Close()
+			fileContent, readErr := os.ReadFile(srcPath)
+			if readErr != nil {
+				return "", fmt.Errorf("读取文件内容失败: %w", readErr)
+			}
 				
 				reader := bytes.NewReader(fileContent)
 				srcImg, _, decodeErr = image.Decode(reader)
@@ -268,9 +268,9 @@ func ConvertToWebP(imgPath string, useWebpExt ...bool) (string, error) {
 	}
 	
 	// 添加方向矫正逻辑
-	srcImg, err = correctImageOrientation(srcImg, srcPath)
-	if err != nil {
-		log.Printf("图像方向矫正失败: %v, 使用未矫正的图像继续处理", err)
+	srcImg, orientErr := correctImageOrientation(srcImg, srcPath)
+	if orientErr != nil {
+		log.Printf("图像方向矫正失败: %v, 使用未矫正的图像继续处理", orientErr)
 	} else {
 		log.Printf("已根据EXIF数据完成图像方向矫正")
 	}
@@ -333,8 +333,8 @@ func ConvertToWebP(imgPath string, useWebpExt ...bool) (string, error) {
 		}
 		
 		// 确保目标目录存在
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			return "", fmt.Errorf("创建目标目录失败: %w", err)
+		if mkdirErr := os.MkdirAll(outputDir, 0755); mkdirErr != nil {
+			return "", fmt.Errorf("创建目标目录失败: %w", mkdirErr)
 		}
 	} else {
 		// 保持原始扩展名，直接覆盖源文件
@@ -343,9 +343,9 @@ func ConvertToWebP(imgPath string, useWebpExt ...bool) (string, error) {
 	
 	// 为避免直接覆盖源文件导致问题，先创建临时文件
 	tempFile := outputPath + ".tmp"
-	dstFile, err := os.Create(tempFile)
-	if err != nil {
-		return "", fmt.Errorf("创建临时文件失败: %w", err)
+	dstFile, createErr := os.Create(tempFile)
+	if createErr != nil {
+		return "", fmt.Errorf("创建临时文件失败: %w", createErr)
 	}
 	defer func() {
 		dstFile.Close()
@@ -519,20 +519,20 @@ func convertAnimatedGif(srcPath, outputPath string, quality float32) error {
 	}
 
 	// 检查源文件是否存在且可读
-	if _, err := os.Stat(srcPath); err != nil {
-		return fmt.Errorf("源文件检查失败: %w", err)
+	if _, statErr := os.Stat(srcPath); statErr != nil {
+		return fmt.Errorf("源文件检查失败: %w", statErr)
 	}
 	
 	// 获取绝对路径
-	srcAbsPath, err := filepath.Abs(srcPath)
-	if err != nil {
-		log.Printf("获取源文件绝对路径失败: %v，使用原路径", err)
+	srcAbsPath, absErr := filepath.Abs(srcPath)
+	if absErr != nil {
+		log.Printf("获取源文件绝对路径失败: %v，使用原路径", absErr)
 		srcAbsPath = srcPath
 	}
 	
-	tempAbsOutput, err := filepath.Abs(tempOutput)
-	if err != nil {
-		log.Printf("获取临时文件绝对路径失败: %v，使用原路径", err)
+	tempAbsOutput, tempAbsErr := filepath.Abs(tempOutput)
+	if tempAbsErr != nil {
+		log.Printf("获取临时文件绝对路径失败: %v，使用原路径", tempAbsErr)
 		tempAbsOutput = tempOutput
 	}
 
@@ -556,11 +556,11 @@ func convertAnimatedGif(srcPath, outputPath string, quality float32) error {
 	cmd1.Stdout = &stdout1
 	cmd1.Stderr = &stderr1
 	
-	if err := cmd1.Run(); err == nil {
+	if runErr := cmd1.Run(); runErr == nil {
 		log.Printf("参数组合1执行成功")
 		success = true
 	} else {
-		log.Printf("参数组合1执行失败: %v", err)
+		log.Printf("参数组合1执行失败: %v", runErr)
 		log.Printf("标准输出: %s", stdout1.String())
 		log.Printf("错误输出: %s", stderr1.String())
 		
@@ -577,11 +577,11 @@ func convertAnimatedGif(srcPath, outputPath string, quality float32) error {
 		cmd2.Stdout = &stdout2
 		cmd2.Stderr = &stderr2
 		
-		if err := cmd2.Run(); err == nil {
+		if runErr := cmd2.Run(); runErr == nil {
 			log.Printf("参数组合2执行成功")
 			success = true
 		} else {
-			log.Printf("参数组合2执行失败: %v", err)
+			log.Printf("参数组合2执行失败: %v", runErr)
 			log.Printf("标准输出: %s", stdout2.String())
 			log.Printf("错误输出: %s", stderr2.String())
 			
@@ -595,7 +595,7 @@ func convertAnimatedGif(srcPath, outputPath string, quality float32) error {
 			shellCmd.Stdout = &stdoutShell
 			shellCmd.Stderr = &stderrShell
 			
-			if err := shellCmd.Run(); err == nil {
+			if shellErr := shellCmd.Run(); shellErr == nil {
 				log.Printf("Shell执行成功")
 				success = true
 			} else {
@@ -752,7 +752,7 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 	log.Printf("处理图片路径: %s -> %s", imgPath, srcPath)
 	
 	// 检查源文件是否存在
-	if _, err := os.Stat(srcPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(srcPath); os.IsNotExist(statErr) {
 		return "", fmt.Errorf("源文件不存在: %s", srcPath)
 	}
 	
@@ -767,9 +767,9 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 	// 特殊处理GIF动画文件
 	if imageType == "gif" || strings.ToLower(filepath.Ext(srcPath)) == ".gif" {
 		// 检查是否为动画GIF
-		isAnimated, err := isAnimatedGif(srcPath)
-		if err != nil {
-			log.Printf("检查GIF动画状态失败: %v，将作为普通图像处理", err)
+		isAnimated, gifCheckErr := isAnimatedGif(srcPath)
+		if gifCheckErr != nil {
+			log.Printf("检查GIF动画状态失败: %v，将作为普通图像处理", gifCheckErr)
 		} else if isAnimated {
 			log.Printf("检测到动画GIF，将使用特殊处理将其转换为动画WebP")
 			
@@ -796,8 +796,8 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 				}
 				
 				// 确保目标目录存在
-				if err := os.MkdirAll(outputDir, 0755); err != nil {
-					return "", fmt.Errorf("创建目标目录失败: %w", err)
+				if mkdirErr := os.MkdirAll(outputDir, 0755); mkdirErr != nil {
+					return "", fmt.Errorf("创建目标目录失败: %w", mkdirErr)
 				}
 				
 				// 当使用.webp扩展名时，原文件和新文件是不同的文件
@@ -816,8 +816,8 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 			// 如果不需要保留原始图片，且生成了新的WebP文件，则删除原图
 			if !keepOriginal && originalSaved {
 				log.Printf("删除原始图片: %s", srcPath)
-				if err := os.Remove(srcPath); err != nil {
-					log.Printf("警告：删除原始图片失败: %v", err)
+				if removeErr := os.Remove(srcPath); removeErr != nil {
+					log.Printf("警告：删除原始图片失败: %v", removeErr)
 				}
 			}
 			
@@ -826,15 +826,15 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 	}
 	
 	// 读取源图片文件
-	srcFile, err := os.Open(srcPath)
-	if err != nil {
-		return "", fmt.Errorf("打开源图片失败: %w", err)
+	srcFile, openErr := os.Open(srcPath)
+	if openErr != nil {
+		return "", fmt.Errorf("打开源图片失败: %w", openErr)
 	}
 	defer srcFile.Close()
 	
 	// 将文件指针重置到开头
-	if _, err := srcFile.Seek(0, io.SeekStart); err != nil {
-		return "", fmt.Errorf("重置文件指针失败: %w", err)
+	if _, seekErr := srcFile.Seek(0, io.SeekStart); seekErr != nil {
+		return "", fmt.Errorf("重置文件指针失败: %w", seekErr)
 	}
 	
 	// 先尝试使用通用解码器
@@ -865,11 +865,11 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 			case "gif":
 				srcImg, decodeErr = gif.Decode(srcFile)
 			default:
-				// 其他检测到的图片类型，再次尝试通用解码器
-				if _, err := srcFile.Seek(0, io.SeekStart); err != nil {
-					return "", fmt.Errorf("重置文件指针失败: %w", err)
-				}
-				srcImg, _, decodeErr = image.Decode(srcFile)
+			// 其他检测到的图片类型，再次尝试通用解码器
+			if _, seekErr := srcFile.Seek(0, io.SeekStart); seekErr != nil {
+				return "", fmt.Errorf("重置文件指针失败: %w", seekErr)
+			}
+			srcImg, _, decodeErr = image.Decode(srcFile)
 			}
 		} else {
 			// 如果没有检测到类型，根据文件扩展名尝试
@@ -887,10 +887,10 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 			default:
 				// 最后一次尝试：读取全部内容并使用bytes.Reader尝试解码
 				srcFile.Close()
-				fileContent, err := os.ReadFile(srcPath)
-				if err != nil {
-					return "", fmt.Errorf("读取文件内容失败: %w", err)
-				}
+				fileContent, readErr := os.ReadFile(srcPath)
+			if readErr != nil {
+				return "", fmt.Errorf("读取文件内容失败: %w", readErr)
+			}
 				
 				reader := bytes.NewReader(fileContent)
 				srcImg, _, decodeErr = image.Decode(reader)
@@ -972,8 +972,8 @@ func ConvertToWebPWithRatio(imgPath string, maxWidth, maxHeight int, keepOrigina
 		}
 		
 		// 确保目标目录存在
-		if err := os.MkdirAll(outputDir, 0755); err != nil {
-			return "", fmt.Errorf("创建目标目录失败: %w", err)
+		if mkdirErr := os.MkdirAll(outputDir, 0755); mkdirErr != nil {
+			return "", fmt.Errorf("创建目标目录失败: %w", mkdirErr)
 		}
 		
 		// 当使用.webp扩展名时，原文件和新文件是不同的文件
@@ -1229,4 +1229,4 @@ func ProcessDirectorySync(dirPath string, recursive, keepOriginal bool, useWebpE
 	log.Printf("同步处理完成。共处理 %d 个文件，耗时：%v", processedCount, elapsedTime)
 	
 	return processedCount, err
-} 
+}

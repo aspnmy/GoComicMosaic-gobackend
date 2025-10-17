@@ -14,9 +14,9 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
-	"GoComicMosaic-gobackend/gobackend/internal/config"
-	"GoComicMosaic-gobackend/gobackend/internal/handlers"
-	"GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/handlers"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
 )
 
 func main() {

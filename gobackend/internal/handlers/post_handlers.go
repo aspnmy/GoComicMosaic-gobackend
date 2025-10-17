@@ -10,8 +10,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"GoComicMosaic-gobackend/gobackend/internal/config"
-	"GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
 )
 
 // GetAllPosts 获取所有文章列表
@@ -156,15 +156,15 @@ func UploadPostImage(c *gin.Context) {
 	}
 
 	// 创建目标文件
-	dst, err := os.Create(filepath.Join(imgsDir, filename))
-	if err != nil {
+	dst, createErr := os.Create(filepath.Join(imgsDir, filename))
+	if createErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法创建文件"})
 		return
 	}
 	defer dst.Close()
 
 	// 复制文件内容
-	if _, err = io.Copy(dst, file); err != nil {
+	if _, copyErr := io.Copy(dst, file); copyErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法保存文件"})
 		return
 	}
@@ -189,14 +189,14 @@ func UploadPostFile(c *gin.Context) {
 
 	// 确保目录存在
 	filesDir := filepath.Join(config.AssetPath, "posts", "files")
-	if err := os.MkdirAll(filesDir, 0755); err != nil {
+	if mkdirErr := os.MkdirAll(filesDir, 0755); mkdirErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法创建目录"})
 		return
 	}
 
 	// 创建目标文件
-	dst, err := os.Create(filepath.Join(filesDir, filename))
-	if err != nil {
+	dst, createErr := os.Create(filepath.Join(filesDir, filename))
+	if createErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法创建文件"})
 		return
 	}

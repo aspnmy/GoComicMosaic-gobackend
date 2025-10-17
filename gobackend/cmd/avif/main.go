@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"GoComicMosaic-gobackend/gobackend/internal/config"
-	"GoComicMosaic-gobackend/gobackend/internal/models"
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 )
 
 // main 函数是 AVIF 图片转换工具的入口点
@@ -60,9 +60,9 @@ func main() {
 			*keepOriginal, *useAvif, *concurrency, *quality)
 
 		// 调用处理JSON列表的函数
-		results, err := utils.ConvertMultipleImagesToAvif(*jsonList, *keepOriginal, *useAvif, *concurrency, *quality)
-		if err != nil {
-			log.Printf("警告: 部分图片处理失败: %v", err)
+		results, convertErr := utils.ConvertMultipleImagesToAvif(*jsonList, *keepOriginal, *useAvif, *concurrency, *quality)
+		if convertErr != nil {
+			log.Printf("警告: 部分图片处理失败: %v", convertErr)
 		}
 
 		// 打印输出结果
@@ -85,14 +85,14 @@ func main() {
 	// 处理目录批量转换
 	if *dirPath != "" {
 		// 验证目录是否存在
-		if _, err := os.Stat(*dirPath); os.IsNotExist(err) {
+		if _, statErr := os.Stat(*dirPath); os.IsNotExist(statErr) {
 			log.Fatalf("指定的目录不存在: %s", *dirPath)
 		}
 
 		// 获取绝对路径
-		absPath, err := filepath.Abs(*dirPath)
-		if err != nil {
-			log.Fatalf("获取目录绝对路径失败: %v", err)
+		absPath, absPathErr := filepath.Abs(*dirPath)
+		if absPathErr != nil {
+			log.Fatalf("获取目录绝对路径失败: %v", absPathErr)
 		}
 
 		log.Printf("开始批量处理目录: %s", absPath)
@@ -102,15 +102,16 @@ func main() {
 		var count int
 
 		// 选择同步或异步处理方式
+		var processErr error
 		if *noAsync {
-			count, err = utils.ProcessDirectoryToAvifSync(absPath, *recursive, *keepOriginal, *useAvif, *quality)
+			count, processErr = utils.ProcessDirectoryToAvifSync(absPath, *recursive, *keepOriginal, *useAvif, *quality)
 		} else {
-			count, err = utils.BatchProcessImagesToAvif(absPath, *recursive, *keepOriginal, *useAvif, *concurrency, *quality)
+			count, processErr = utils.BatchProcessImagesToAvif(absPath, *recursive, *keepOriginal, *useAvif, *concurrency, *quality)
 		}
 
-		if err != nil {
-			log.Fatalf("批量处理失败: %v", err)
-		}
+		if processErr != nil {
+		log.Fatalf("批量处理失败: %v", processErr)
+	}
 
 		// 打印输出结果
 		fmt.Println("\n批量转换成功!")
@@ -132,16 +133,16 @@ func main() {
 		fullPath = *imgPath
 	} else {
 		// 相对路径，先尝试当前目录
-		workDir, err := os.Getwd()
-		if err != nil {
-			log.Fatalf("获取工作目录失败: %v", err)
+		workDir, wdErr := os.Getwd()
+		if wdErr != nil {
+			log.Fatalf("获取工作目录失败: %v", wdErr)
 		}
 
 		fullPath = filepath.Join(workDir, *imgPath)
 	}
 
 	// 检查文件是否存在
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(fullPath); os.IsNotExist(statErr) {
 		// 文件不存在，打印更详细的提示
 		log.Printf("注意: 文件在 %s 不存在", fullPath)
 		log.Printf("将尝试按原始路径处理: %s", *imgPath)
@@ -152,16 +153,17 @@ func main() {
 	}
 
 	var outputPath string
+	var convertErr error
 
 	// 根据参数选择合适的转换方法
 	if *keepRatio {
-		outputPath, err = utils.ConvertToAvifWithRatio(*imgPath, *maxWidth, *maxHeight, *keepOriginal, *useAvif, *quality)
+		outputPath, convertErr = utils.ConvertToAvifWithRatio(*imgPath, *maxWidth, *maxHeight, *keepOriginal, *useAvif, *quality)
 	} else {
-		outputPath, err = utils.ConvertToAvif(*imgPath, *useAvif, *quality)
+		outputPath, convertErr = utils.ConvertToAvif(*imgPath, *useAvif, *quality)
 	}
 
-	if err != nil {
-		log.Fatalf("图片转换失败: %v", err)
+	if convertErr != nil {
+		log.Fatalf("图片转换失败: %v", convertErr)
 	}
 
 	// 打印输出结果
@@ -176,9 +178,9 @@ func main() {
 	}
 
 	// 检查输出文件是否存在
-	if _, err := os.Stat(outputPath); err == nil {
-		fileInfo, err := os.Stat(outputPath)
-		if err == nil {
+	if _, firstStatErr := os.Stat(outputPath); firstStatErr == nil {
+		fileInfo, secondStatErr := os.Stat(outputPath)
+		if secondStatErr == nil {
 			fmt.Printf("输出文件大小: %.2f KB\n", float64(fileInfo.Size())/1024)
 		}
 	}

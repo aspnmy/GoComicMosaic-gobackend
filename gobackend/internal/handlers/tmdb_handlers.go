@@ -9,8 +9,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"GoComicMosaic-gobackend/gobackend/internal/models"
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 )
 
 // TMDBSearchRequest TMDB搜索请求

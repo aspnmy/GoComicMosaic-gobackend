@@ -1,6 +1,6 @@
-# 美漫资源共享平台 - Go 后端
+# GoComicMosaic - Go 后端
 
-这是美漫资源共建平台后端项目，使用Golang实现。
+这是 GoComicMosaic 影视资源共建平台的后端项目，使用 Golang 实现。该平台允许用户自由提交资源信息（标题、类型、简介、图片、资源链接），像马赛克一样，由多方贡献拼凑成完整资源。
 
 ## 功能特点
 - **资源管理**：支持资源的新增、修改、查询、删除
@@ -93,20 +93,6 @@ gobackend/
 
 ### TMDB API相关
 
-您说得对，我不应该瞎编。让我查看一下实际的代码，找到真实的API路由：
-
-Ran tool
-让我尝试其他方式来查找路由定义：
-
-Read file: gobackend/internal/handlers/routes.go
-
-Read file: gobackend/internal/handlers/tmdb_handlers.go
-
-Read file: gobackend/internal/handlers/tmdb_season_handlers.go
-基于实际代码检查，以下是TMDB API的真实路由列表：
-
-### TMDB API相关
-
 - `GET /api/settings/tmdb_status` - 获取当前TMDB功能状态
 - `GET /api/admin/tmdb/config` - 获取当前TMDB配置
 - `PUT /api/admin/tmdb/config` - 更新TMDB配置信息
@@ -127,7 +113,7 @@ Read file: gobackend/internal/handlers/tmdb_season_handlers.go
 
 ### 环境要求
 
-- Go 1.20+
+- Go 1.22+
 - libwebp (用于WebP图片转换)
 
 ### 配置
@@ -140,6 +126,15 @@ ASSETS_PATH="../data/assets" # 默认 '../assets'
 DB_PATH="../data/resource_hub.db" # 默认gobackend目录下
 TMDB_API_KEY=your_tmdb_api_key # 此处可选，也可通过管理界面配置
 ```
+
+### 模块路径
+
+该项目的模块路径已配置为：
+```
+github.com/aspnmy/GoComicMosaic-gobackend
+```
+
+每次构建时会自动从GitHub获取最新代码。
 
 ### 运行
 
@@ -158,8 +153,10 @@ GIN_MODE=debug go run cmd/api/main.go
 go build -ldflags="-w -s" -o app cmd/api/main.go
 ```
 
-交叉编译(mac编译linux)
-```
+### 交叉编译
+
+Mac 编译 Linux 版本：
+```bash
 sudo chown -R $(whoami):admin /usr/local/Homebrew
 chmod u+w /usr/local/Homebrew
 brew install x86_64-linux-gnu-binutils
@@ -168,3 +165,12 @@ brew install x86_64-unknown-linux-gnu
 
 CC=/usr/local/Cellar/x86_64-unknown-linux-gnu/13.3.0.reinstall/bin/x86_64-linux-gnu-gcc CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -tags "sqlite_static" -ldflags="-w -s" -o app cmd/api/main.go
 ```
+
+### 使用构建脚本
+
+项目提供了便捷的构建脚本：
+```bash
+./build-backend.sh
+```
+
+该脚本会自动处理依赖安装、版本注入和多版本构建（标准版、WebP版、AVIF版）。

@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"GoComicMosaic-gobackend/gobackend/internal/auth"
-	"GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/auth"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
 )
 
 // LoginRequest 登录请求结构，遵循OAuth2标准

@@ -170,6 +170,33 @@ func MoveApprovedImage(resourceID int, imagePath string) (string, error) {
 	return fmt.Sprintf("/assets/imgs/%d/%s", resourceID, filename), nil
 }
 
+// ConvertImageToPreferredFormat 根据配置的图片格式将图片转换为对应的格式
+// 参数:
+// - imgPath: 输入图片路径
+// - useFormatExt: 是否使用对应格式的扩展名（如果为false，则保持原扩展名）
+// - quality: 图片压缩质量(0-100)，仅对AVIF有效，WebP使用默认质量
+// 返回值:
+// - 输出图片路径
+// - 错误信息
+func ConvertImageToPreferredFormat(imgPath string, useFormatExt bool, quality int) (string, error) {
+	// 获取配置的图片格式
+	imageFormat := config.GetImageFormat()
+	log.Printf("使用图片格式配置: %s 处理图片: %s", imageFormat, imgPath)
+	
+	switch imageFormat {
+	case "avif":
+		// 使用AVIF格式转换
+		return ConvertToAvif(imgPath, useFormatExt, quality)
+	case "webp":
+		// 使用WebP格式转换
+		return ConvertToWebP(imgPath, useFormatExt)
+	default:
+		// 默认使用WebP
+		log.Printf("未知的图片格式配置: %s，使用默认格式WebP", imageFormat)
+		return ConvertToWebP(imgPath, useFormatExt)
+	}
+}
+
 // moveFile 移动文件（复制后删除原文件）
 func moveFile(src, dst string) error {
 	// 检查源文件是否存在

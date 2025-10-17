@@ -306,53 +306,7 @@ func BatchProcessImagesToAvif(dirPath string, recursive bool, keepOriginal, useA
 	return count, nil
 }
 
-// 辅助函数: 计算目标尺寸，保持宽高比
-func calculateTargetSize(originalWidth, originalHeight, maxWidth, maxHeight int) (int, int) {
-	// 如果未指定最大尺寸，则使用默认值
-	if maxWidth <= 0 || maxHeight <= 0 {
-		// 根据图片方向设置默认尺寸
-		if originalWidth > originalHeight {
-			// 横图
-			maxWidth = 1280
-			maxHeight = 720
-		} else {
-			// 竖图
-			maxWidth = 600
-			maxHeight = 900
-		}
-	}
 
-	// 计算缩放比例
-	widthRatio := float64(maxWidth) / float64(originalWidth)
-	heightRatio := float64(maxHeight) / float64(originalHeight)
-
-	// 使用较小的缩放比例，以确保图片完全适应目标尺寸
-	scaleRatio := widthRatio
-	if heightRatio < widthRatio {
-		scaleRatio = heightRatio
-	}
-
-	// 如果图片已经小于目标尺寸，则保持原始尺寸
-	if scaleRatio > 1.0 {
-		scaleRatio = 1.0
-	}
-
-	// 计算新的尺寸
-	newWidth := int(float64(originalWidth) * scaleRatio)
-	newHeight := int(float64(originalHeight) * scaleRatio)
-
-	return newWidth, newHeight
-}
-
-// 辅助函数: 获取图片类型
-func getImageType(path string) string {
-	ext := strings.ToLower(filepath.Ext(path))
-	// 移除点号
-	if strings.HasPrefix(ext, ".") {
-		ext = ext[1:]
-	}
-	return ext
-}
 
 // 为非递归遍历提供的简单os.FileInfo实现
 // 因为os.ReadDir返回的是os.DirEntry，需要转换为os.FileInfo

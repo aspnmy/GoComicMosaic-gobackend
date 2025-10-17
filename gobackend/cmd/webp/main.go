@@ -7,9 +7,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"GoComicMosaic-gobackend/gobackend/internal/config"
-	"GoComicMosaic-gobackend/gobackend/internal/models"
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 )
 
 func main() {
@@ -57,9 +57,9 @@ func main() {
 			*keepOriginal, *useWebp, *concurrency)
 
 		// 调用处理JSON列表的函数
-		results, err := utils.ConvertMultipleImages(*jsonList, *keepOriginal, *useWebp, *concurrency)
-		if err != nil {
-			log.Printf("警告: 部分图片处理失败: %v", err)
+		results, jsonErr := utils.ConvertMultipleImages(*jsonList, *keepOriginal, *useWebp, *concurrency)
+		if jsonErr != nil {
+			log.Printf("警告: 部分图片处理失败: %v", jsonErr)
 		}
 
 		// 打印输出结果
@@ -82,14 +82,14 @@ func main() {
 	// 处理目录批量转换
 	if *dirPath != "" {
 		// 验证目录是否存在
-		if _, err := os.Stat(*dirPath); os.IsNotExist(err) {
+		if _, dirErr := os.Stat(*dirPath); os.IsNotExist(dirErr) {
 			log.Fatalf("指定的目录不存在: %s", *dirPath)
 		}
 
 		// 获取绝对路径
-		absPath, err := filepath.Abs(*dirPath)
-		if err != nil {
-			log.Fatalf("获取目录绝对路径失败: %v", err)
+		absPath, absErr := filepath.Abs(*dirPath)
+		if absErr != nil {
+			log.Fatalf("获取目录绝对路径失败: %v", absErr)
 		}
 
 		log.Printf("开始批量处理目录: %s", absPath)
@@ -129,16 +129,16 @@ func main() {
 		fullPath = *imgPath
 	} else {
 		// 相对路径，先尝试当前目录
-		workDir, err := os.Getwd()
-		if err != nil {
-			log.Fatalf("获取工作目录失败: %v", err)
+		workDir, workErr := os.Getwd()
+		if workErr != nil {
+			log.Fatalf("获取工作目录失败: %v", workErr)
 		}
 
 		fullPath = filepath.Join(workDir, *imgPath)
 	}
 
 	// 检查文件是否存在
-	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(fullPath); os.IsNotExist(statErr) {
 		// 文件不存在，打印更详细的提示
 		log.Printf("注意: 文件在 %s 不存在", fullPath)
 		log.Printf("将尝试按原始路径处理: %s", *imgPath)
@@ -173,9 +173,9 @@ func main() {
 	}
 
 	// 检查输出文件是否存在
-	if _, err := os.Stat(outputPath); err == nil {
-		fileInfo, err := os.Stat(outputPath)
-		if err == nil {
+	if _, statErr := os.Stat(outputPath); statErr == nil {
+		fileInfo, infoErr := os.Stat(outputPath)
+		if infoErr == nil {
 			fmt.Printf("输出文件大小: %.2f KB\n", float64(fileInfo.Size())/1024)
 		}
 	}

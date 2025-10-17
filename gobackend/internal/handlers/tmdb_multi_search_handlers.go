@@ -8,7 +8,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 )
 
 // MultiSearchTMDB 多类型搜索TMDB API

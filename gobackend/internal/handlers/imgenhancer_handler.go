@@ -2,13 +2,14 @@ package handlers
 
 import (
 	"fmt"
-	"GoComicMosaic-gobackend/gobackend/internal/config"
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -45,7 +46,7 @@ func EnhanceImageHandler(c *gin.Context) {
 
 	// 解析请求参数
 	var req ImageEnhanceRequest
-	if err := c.ShouldBind(&req); err != nil {
+	if bindErr := c.ShouldBind(&req); bindErr != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
 			"message": "无效的请求参数",
@@ -55,10 +56,10 @@ func EnhanceImageHandler(c *gin.Context) {
 
 	// 确保 handles 目录存在
 	handlesDir := filepath.Join(config.AssetPath, "handles")
-	if err := os.MkdirAll(handlesDir, 0755); err != nil {
+	if mkdirErr := os.MkdirAll(handlesDir, 0755); mkdirErr != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("创建目录失败: %v", err),
+			"message": fmt.Sprintf("创建目录失败: %v", mkdirErr),
 		})
 		return
 	}

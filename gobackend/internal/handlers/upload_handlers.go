@@ -10,8 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"GoComicMosaic-gobackend/gobackend/internal/models"
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 )
 
 // UploadImage 处理单个图片上传
@@ -56,6 +57,25 @@ func UploadImage(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("保存文件失败: %v", err)})
 		return
+	}
+	
+	// 根据配置的图片格式自动转换图片
+	// 获取实际文件路径
+	assetDir := config.GetAssetsDir()
+	actualFilePath := filepath.Join(assetDir, savedPath[8:]) // 去掉 "/assets/" 前缀
+	
+	// 转换图片为配置的格式
+	convertedPath, err := utils.ConvertImageToPreferredFormat(actualFilePath, true, 90)
+	if err != nil {
+		// 如果转换失败，记录错误但继续使用原始文件
+		fmt.Printf("图片转换失败: %v\n", err)
+	} else {
+		// 更新返回的路径为转换后的路径
+		// 从转换后的文件路径获取相对于assets的路径
+		convertedRelPath, err := filepath.Rel(assetDir, convertedPath)
+		if err == nil {
+			savedPath = "/assets/" + convertedRelPath
+		}
 	}
 
 	// 返回文件信息
@@ -135,14 +155,33 @@ func UploadMultipleImages(c *gin.Context) {
 		fileReader.Seek(0, io.SeekStart)
 
 		// 保存文件
-		savedPath, err := utils.SaveUploadedFile(fileReader, fileHeader.Filename)
-		if err != nil {
-			results = append(results, gin.H{
-				"name":  fileHeader.Filename,
-				"error": fmt.Sprintf("保存文件失败: %v", err),
-			})
-			continue
+	savedPath, err := utils.SaveUploadedFile(fileReader, fileHeader.Filename)
+	if err != nil {
+		results = append(results, gin.H{
+			"name":  fileHeader.Filename,
+			"error": fmt.Sprintf("保存文件失败: %v", err),
+		})
+		continue
+	}
+	
+	// 根据配置的图片格式自动转换图片
+	// 获取实际文件路径
+	assetDir := config.GetAssetsDir()
+	actualFilePath := filepath.Join(assetDir, savedPath[8:]) // 去掉 "/assets/" 前缀
+	
+	// 转换图片为配置的格式
+	convertedPath, err := utils.ConvertImageToPreferredFormat(actualFilePath, true, 90)
+	if err != nil {
+		// 如果转换失败，记录错误但继续使用原始文件
+		fmt.Printf("图片转换失败: %v\n", err)
+	} else {
+		// 更新返回的路径为转换后的路径
+		// 从转换后的文件路径获取相对于assets的路径
+		convertedRelPath, err := filepath.Rel(assetDir, convertedPath)
+		if err == nil {
+			savedPath = "/assets/" + convertedRelPath
 		}
+	}
 
 		// 添加结果
 		results = append(results, gin.H{

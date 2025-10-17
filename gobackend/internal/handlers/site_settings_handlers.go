@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"GoComicMosaic-gobackend/gobackend/internal/config"
-	"GoComicMosaic-gobackend/gobackend/internal/models"
-	"GoComicMosaic-gobackend/gobackend/internal/utils"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/config"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/models"
+	"github.com/aspnmy/GoComicMosaic-gobackend/gobackend/internal/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -82,9 +83,9 @@ func UpdateSiteSettings(c *gin.Context) {
 	}
 
 	var update models.SiteSettingsUpdate
-	if err := c.ShouldBindJSON(&update); err != nil {
-		log.Printf("解析JSON数据失败: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求数据", "details": err.Error()})
+	if bindErr := c.ShouldBindJSON(&update); bindErr != nil {
+		log.Printf("解析JSON数据失败: %v", bindErr)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无效的请求数据", "details": bindErr.Error()})
 		return
 	}
 
@@ -116,40 +117,40 @@ func UpdateSiteSettings(c *gin.Context) {
 
 	if err != nil || settingExists == 0 {
 		// 创建新设置
-		settingValue, err := update.SettingValue.Value()
-		if err != nil {
-			log.Printf("序列化设置值失败: %v", err)
+		settingValue, valueErr := update.SettingValue.Value()
+		if valueErr != nil {
+			log.Printf("序列化设置值失败: %v", valueErr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "序列化设置值失败"})
 			return
 		}
 
-		result, err := db.Exec(
+		result, execErr := db.Exec(
 			"INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) VALUES (?, ?, ?, ?)",
 			settingKey, settingValue, time.Now(), time.Now(),
 		)
-		if err != nil {
-			log.Printf("保存设置失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存设置失败", "details": err.Error()})
+		if execErr != nil {
+			log.Printf("保存设置失败: %v", execErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存设置失败", "details": execErr.Error()})
 			return
 		}
 		id, _ := result.LastInsertId()
 		log.Printf("创建新设置成功，ID: %d", id)
 	} else {
 		// 更新现有设置
-		settingValue, err := update.SettingValue.Value()
-		if err != nil {
-			log.Printf("序列化设置值失败: %v", err)
+		settingValue, valueErr := update.SettingValue.Value()
+		if valueErr != nil {
+			log.Printf("序列化设置值失败: %v", valueErr)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "序列化设置值失败"})
 			return
 		}
 
-		result, err := db.Exec(
+		result, updateErr := db.Exec(
 			"UPDATE site_settings SET setting_value = ?, updated_at = ? WHERE setting_key = ?",
 			settingValue, time.Now(), settingKey,
 		)
-		if err != nil {
-			log.Printf("更新设置失败: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新设置失败", "details": err.Error()})
+		if updateErr != nil {
+			log.Printf("更新设置失败: %v", updateErr)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "更新设置失败", "details": updateErr.Error()})
 			return
 		}
 		rows, _ := result.RowsAffected()
@@ -163,6 +164,37 @@ func UpdateSiteSettings(c *gin.Context) {
 		log.Printf("读取更新后的设置失败: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取更新后的设置失败"})
 		return
+	}
+
+	// 特殊处理图片格式设置
+	if settingKey == "image_format" {
+		// 将设置值应用到配置中
+		// 正确处理models.JsonMap类型
+		var formatValue string
+		
+		// 由于SettingValue是JsonMap(map[string]interface{})，我们需要适当处理
+		// 尝试获取map中的值作为字符串
+		if value, ok := settings.SettingValue["value"]; ok {
+			// 尝试不同类型的转换
+			switch v := value.(type) {
+			case string:
+				formatValue = v
+			case []byte:
+				formatValue = string(v)
+			default:
+				// 尝试将其他类型转换为字符串
+				formatValue = fmt.Sprintf("%v", v)
+			}
+		} else {
+			// 如果没有特定的键，尝试将整个map转换为字符串
+			formatValue = fmt.Sprintf("%v", settings.SettingValue)
+		}
+		
+		if config.SetImageFormat(formatValue) {
+			log.Printf("图片格式设置已成功应用: %s", formatValue)
+		} else {
+			log.Printf("图片格式设置应用失败: %s", formatValue)
+		}
 	}
 
 	log.Printf("更新设置完成，返回结果: %+v", settings)
@@ -256,24 +288,25 @@ func UpdateTMDBConfig(c *gin.Context) {
 
 	if err != nil || settingExists == 0 {
 		// 创建新设置
-		settingValue, err := settingsUpdate.SettingValue.Value()
-		if err != nil {
+		settingValue, valueErr := settingsUpdate.SettingValue.Value()
+		if valueErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "序列化设置值失败"})
 			return
 		}
 
-		_, err = db.Exec(
+		var execErr error
+		_, execErr = db.Exec(
 			"INSERT INTO site_settings (setting_key, setting_value, created_at, updated_at) VALUES (?, ?, ?, ?)",
 			utils.TMDB_SETTINGS_KEY, settingValue, time.Now(), time.Now(),
 		)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存设置失败", "details": err.Error()})
+		if execErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "保存设置失败", "details": execErr.Error()})
 			return
 		}
 	} else {
 		// 更新现有设置
-		settingValue, err := settingsUpdate.SettingValue.Value()
-		if err != nil {
+		settingValue, valueErr := settingsUpdate.SettingValue.Value()
+		if valueErr != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "序列化设置值失败"})
 			return
 		}
