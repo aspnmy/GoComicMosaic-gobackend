@@ -1,0 +1,2 @@
+# GoComicMosaic-gobackend
+分离GoComicMosaic组件的后端为独立包，便于提高构建容器的速度
